@@ -1,0 +1,342 @@
+/*Synchronous Robotic Arm
+ * By Erik Millington
+ * 9/18/20
+ */
+
+//flex sensor serial value range: 850 - 1000
+
+#include <Servo.h>;
+
+#include <SPI.h>
+#include <nRF24L01.h>
+#include <RF24.h>
+RF24 radio(14,15); //CE,CSN
+const byte address[6] = "00001";
+
+Servo base;
+Servo wrist;
+Servo thumb;
+Servo index;
+Servo middle;
+Servo wring;
+Servo pinky;
+
+
+const bool thumbOn = true;
+const bool thumbOff = false;
+const bool indexOn = true;
+const bool indexOff = false;
+const bool middleOn = true;
+const bool middleOff = false;
+const bool wringOn = true;
+const bool wringOff = false;
+
+const int radioDelay = 10; //Should equal delay interval of data transmission of transmitter 
+
+const int Thumb = 2;
+const int Index = 3;
+const int Middle = 4;
+const int Wring = 5;
+const int Pinky = 6;
+const int Wrist1 = 0;
+const int Wrist2 = 1;
+
+
+
+/*Joint starting postions
+ * thumb: 90 
+ * index: 120
+ * middle: 120
+ * wring: 120
+ * pinky: 120
+ * wrist: 90
+ * base: 90
+ */
+ /*Joint analogRead value mapping
+  * thumb: 180 = closed, 0 = open
+  * index,middle,wring,pinky: 180 = open, 0 = closed
+  * wrist: 180 = up, 0 = down
+  */
+
+
+void setup()
+{
+Serial.begin(9600);
+radio.begin();
+radio.openReadingPipe(0, address);   
+radio.setPALevel(RF24_PA_MIN);       
+radio.startListening();  
+base.attach(11);
+wrist.attach(10);
+thumb.attach(9);
+index.attach(8);
+middle.attach(7);
+wring.attach(6);
+pinky.attach(5); 
+}
+
+
+void all(int pos)
+{
+  thumb.write(180-pos);
+  index.write(pos);
+  middle.write(pos);
+  wring.write(pos);
+  pinky.write(pos);  
+}
+
+void sweep(int startPos, int endPos, int d, bool t, bool i, bool m, bool w, bool p)
+{
+for(int k = startPos; k > endPos; k--)
+{
+   if(t == true)
+    {
+     thumb.write(180-k);
+    }
+     if(i == true)
+    {
+      index.write(k);
+    }
+    if(m == true)
+    {
+      middle.write(k);
+    }
+    if(w == true)
+    {
+      wring.write(k);
+    }
+  if(p == true)
+    {
+      pinky.write(k);
+   }
+   delay(d);
+  }
+ for(int k = endPos; k < startPos; k++)
+  {
+    if(t == true)
+    {
+      thumb.write(180-k);
+    }
+    if(i == true)
+    {
+      index.write(k);
+    }
+    if(m == true)
+    {
+      middle.write(k);
+    }
+    if(w == true)
+    {
+      wring.write(k);
+    }
+    if(p == true)
+    {
+      pinky.write(k);
+    }
+  delay(d);
+ }
+}
+
+ 
+
+void sync(int loopDelay, bool t, bool i, bool m, bool w, bool p, bool wrst)
+{
+  if(radio.available())
+  {
+    int posVals[32] = {000};
+    radio.read(posVals, sizeof(posVals));
+    int thumbPos = posVals[Thumb];
+    int indexPos = posVals[Index];
+    int middlePos = posVals[Middle];
+    int wringPos = posVals[Wring];
+    int pinkyPos = posVals[Pinky];
+    int wrist1Val = posVals[Wrist1];
+    int wrist2Val = posVals[Wrist2];
+  if(t == true){
+    if(thumb.read() > thumbPos)
+    {
+      for(int c = thumb.read(); c > thumbPos; c--)
+      {
+        thumb.write(c);
+        delay(loopDelay);
+      }
+    }
+    if(thumb.read() < thumbPos)
+    {
+      for(int c = thumb.read(); c < thumbPos; c++)
+      {
+        thumb.write(c);
+        delay(loopDelay);
+      }
+    }
+    if(thumb.read() == thumbPos)
+    {
+      thumb.write(thumb.read());
+      delay(loopDelay);
+    }
+  }
+  if(i == true){
+    if(index.read() > indexPos)
+    {
+      for(int c = index.read(); c > indexPos; c--)
+      {
+        index.write(c);
+        delay(loopDelay);
+      }
+    }
+    if(index.read() < indexPos)
+    {
+      for(int c = index.read(); c < indexPos; c++)
+      {
+        index.write(c);
+        delay(loopDelay);
+      }
+    }
+    if(index.read() == indexPos)
+    {
+      index.write(index.read());
+      delay(loopDelay);
+    }
+  }
+  if(m == true){
+    if(middle.read() > middlePos)
+    {
+      for(int c = middle.read(); c > middlePos; c--)
+      {
+        middle.write(c);
+        delay(loopDelay);
+      }
+    }
+    if(middle.read() < middlePos)
+    {
+      for(int c = middle.read(); c < middlePos; c++)
+      {
+        middle.write(c);
+        delay(loopDelay);
+      }
+    }
+    if(middle.read() == middlePos)
+    {
+      middle.write(middle.read());
+      delay(loopDelay);
+    }
+  }
+  if(w == true){
+    if(wring.read() > wringPos)
+    {
+      for(int c = wring.read(); c > wringPos; c--)
+      {
+        wring.write(c);
+        delay(loopDelay);
+      }
+    }
+    if(wring.read() < wringPos)
+    {
+      for(int c = wring.read(); c < wringPos; c++)
+      {
+        wring.write(c);
+        delay(loopDelay);
+      }
+    }
+    if(wring.read() == wringPos)
+    {
+      wring.write(wring.read());
+      delay(loopDelay);
+    }
+  }
+  if(p == true){
+    if(pinky.read() > pinkyPos)
+    {
+      for(int c = pinky.read(); c > pinkyPos; c--)
+      {
+        pinky.write(c);
+        delay(loopDelay);
+      }
+    }
+    if(pinky.read() < pinkyPos)
+    {
+      for(int c = pinky.read(); c < pinkyPos; c++)
+      {
+        pinky.write(c);
+        delay(loopDelay);
+      }
+    }
+    if(pinky.read() == pinkyPos)
+    {
+      pinky.write(pinky.read());
+      delay(loopDelay);
+    }
+  }
+  if(wrst == true)
+  {
+    if(wrist1Val < 170 && wrist2Val > 170)
+    {
+      int wristPos = map(wrist1Val,180,0,91,180);
+      if(wrist.read() > wristPos)
+      {
+        for(int c = wrist.read(); c > wristPos; c--)
+        {
+          wrist.write(c);
+          delay(loopDelay);
+        }
+      }
+      if(wrist.read() < wristPos)
+      {
+        for(int c = wrist.read(); c < wristPos; c++)
+        {
+          wrist.write(c);
+          delay(loopDelay);
+        }
+      }
+      if(wrist.read() == wristPos)
+      {
+        wrist.write(wrist.read());
+        delay(loopDelay);
+      }
+    }
+    if(wrist1Val > 170 && wrist2Val < 170)
+    {
+      int wristPos = map(wrist2Val,180,0,90,0);
+      if(wrist.read() > wristPos)
+      {
+        for(int c = wrist.read(); c > wristPos; c--)
+        {
+          wrist.write(c);
+          delay(loopDelay);
+        }
+      }
+      if(wrist.read() < wristPos)
+      {
+        for(int c = wrist.read(); c < wristPos; c++)
+        {
+          wrist.write(c);
+          delay(loopDelay);
+        }
+      }
+      if(wrist.read() == wristPos)
+      {
+        wrist.write(wrist.read());
+      }
+    }
+  }
+  }
+}
+
+
+
+
+
+
+
+
+
+void loop()
+{
+
+sync(1,true,true,true,true,true,false);
+delay(10);
+  
+  
+
+
+}
