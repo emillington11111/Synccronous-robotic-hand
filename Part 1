@@ -1,0 +1,79 @@
+
+    #include <SPI.h>
+    #include <nRF24L01.h>
+    #include <RF24.h>
+    RF24 radio(10, 9); // CE, CSN         
+    const byte address[6] = "00001"; 
+    const int Wrist1 = 0;
+    const int Wrist2 = 1;
+    const int Thumb = 2;
+    const int Index = 3;
+    const int Middle = 4;
+    const int Wring = 5;
+    const int Pinky = 6;
+
+
+    int thumbPos;
+    int indexPos;
+    int middlePos;
+    int wringPos;
+    int pinkyPos;
+    int posVals[32];
+
+    int getPos(int joint)
+    {
+      int val;
+      int pos;
+      if(joint != Thumb)
+      {
+        val = map(analogRead(joint),820,970,180,0);
+      }
+     /* if(joint = Wrist1)
+      {
+        val = map(analogRead(joint),700,930,0,180);
+      }
+      if(joint = Wrist2)
+      {
+        val = map(analogRead(joint),725,920,0,180);
+      }*/
+      else
+      {
+        val = map(analogRead(joint),850,900,0,180);
+      }
+      pos = constrain(val,0,180);
+      return pos;
+    }
+
+    void sendData()
+    {
+      posVals[Wrist1] = getPos(Wrist1);
+      posVals[Wrist2] = getPos(Wrist2);
+      posVals[Thumb] = getPos(Thumb);
+      posVals[Index] = getPos(Index);
+      posVals[Middle] = getPos(Middle);
+      posVals[Wring] = getPos(Wring);
+      posVals[Pinky] = getPos(Pinky);
+
+      radio.write(posVals,sizeof(posVals));
+
+      
+    }
+    
+    
+    void setup() 
+    {
+      
+      Serial.begin(9600);
+      radio.begin();                  
+      radio.openWritingPipe(address); 
+      radio.setPALevel(RF24_PA_MIN);  
+      radio.stopListening();          
+    }
+    void loop()
+    {
+    
+   sendData();
+   delay(5);
+   
+  
+    }
